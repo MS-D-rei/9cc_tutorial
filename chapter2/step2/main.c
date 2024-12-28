@@ -3,7 +3,7 @@
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        fprintf(stderr, "%s\n", "The number of args should be 2");
+        fprintf(stderr, "%s\n", "The number of args should be 1");
         return 1;
     }
 
