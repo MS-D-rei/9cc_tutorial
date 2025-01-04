@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "node.h"
+#include "tokenizer.h"
 
 /* Recursive Decendent Parsing */
 /* Express by Backus-Naur form (BNF) */
@@ -30,48 +31,42 @@ Node* create_node_num(int val) {
     return new_node;
 }
 
-bool consume_node(char op) {}
-
-void expect_node_op(char op) {}
-
-int expect_node_num() {}
-
-Node* express() {
-    Node* node = mul();
+Node* express(char* user_input, Token** token) {
+    Node* node = mul(user_input, token);
 
     for (;;) {
-        if (consume_node('+')) {
-            node = create_node(ND_ADD, node, mul());
-        } else if (consume_node('-')) {
-            node = create_node(ND_SUB, node, mul());
+        if (consume_op(token, '+')) {
+            node = create_node(ND_ADD, node, mul(user_input, token));
+        } else if (consume_op(token, '-')) {
+            node = create_node(ND_SUB, node, mul(user_input, token));
         } else {
             return node;
         }
     }
 }
 
-Node* mul() {
-    Node* node = primary();
+Node* mul(char* user_input, Token** token) {
+    Node* node = primary(user_input, token);
 
     for (;;) {
-        if (consume_node('*')) {
-            node = create_node(ND_MUL, node, primary());
-        } else if (consume_node('/')) {
-            node = create_node(ND_DIV, node, primary());
+        if (consume_op(token, '*')) {
+            node = create_node(ND_MUL, node, primary(user_input, token));
+        } else if (consume_op(token, '/')) {
+            node = create_node(ND_DIV, node, primary(user_input, token));
         } else {
             return node;
         }
     }
 }
 
-Node* primary() {
-    if (consume_node('(')) {
-        Node* node = express();
-        expect_node_op(')');
+Node* primary(char* user_input, Token** token) {
+    if (consume_op(token, '(')) {
+        Node* node = express(user_input, token);
+        expect_op(user_input, token, ')');
         return node;
     }
 
-    return create_node_num(expect_node_num());
+    return create_node_num(expect_number(user_input, token));
 }
 
 /*
@@ -103,15 +98,15 @@ Node* primary() {
  *   / \
  * lhs rhs
  */
-void generate(Node* node) {
+void generate_asm_code(Node* node) {
     if (node->kind == ND_NUM) {
         printf("  push %d\n", node->val);
         return;
     }
 
     /* calculate `lhs` and `rhs`, then push each value to stack. */
-    generate(node->lhs);
-    generate(node->rhs);
+    generate_asm_code(node->lhs);
+    generate_asm_code(node->rhs);
 
     printf("  pop rdi\n");
     printf("  pop rax\n");

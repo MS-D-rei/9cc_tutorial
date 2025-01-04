@@ -15,7 +15,9 @@ struct Token {
     char* str;
 };
 
-bool consume(Token** token, char op);
+bool consume_op(Token** token, char op);
+
+void expect_op(char* user_input, Token** token, char op);
 
 int expect_number(char* user_input, Token** token);
 

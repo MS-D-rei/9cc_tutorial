@@ -1,8 +1,8 @@
 CC=gcc-11
 CFLAGS=-std=c18 -g -static
 
-9cc: main.c error_at.c
-	$(CC) -o 9cc main.c error_at.c tokenizer.c
+9cc: main.c error_at.c tokenizer.c node.c
+	$(CC) -o 9cc main.c error_at.c tokenizer.c node.c
 
 test: 9cc
 	./test.sh

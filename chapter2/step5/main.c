@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "node.h"
 #include "tokenizer.h"
 
 char* user_input;
@@ -23,32 +24,31 @@ int main(int argc, char** argv) {
     }
 
     user_input = argv[1];
-
+    /* Create token linked list. */
     token = tokenize(user_input);
-
-    // printf("%p\n", (void*) token);
-    // printf("%p\n", (void*) &token);
-    // printf("%p\n", (void*) token->next);
+    /* Create nodes of a abstract syntax tree. */
+    Node* node = express(user_input, &token);
 
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    printf("  mov rax, %d\n", expect_number(user_input, &token));
+    // printf("  mov rax, %d\n", expect_number(user_input, &token));
+    //
+    // while (!at_eof(token)) {
+    //     if (consume_op(&token, '+')) {
+    //         printf("  add rax, %d\n", expect_number(user_input, &token));
+    //         continue;
+    //     }
+    //     if (consume_op(&token, '-')) {
+    //         printf("  sub rax, %d\n", expect_number(user_input, &token));
+    //         continue;
+    //     }
+    // }
 
-    // printf("%p\n", (void*) token);
+    generate_asm_code(node);
 
-    while (!at_eof(token)) {
-        if (consume(&token, '+')) {
-            printf("  add rax, %d\n", expect_number(user_input, &token));
-            continue;
-        }
-        if (consume(&token, '-')) {
-            printf("  sub rax, %d\n", expect_number(user_input, &token));
-            continue;
-        }
-    }
-
+    printf("  pop rax\n");
     printf("  ret\n");
 
     return EXIT_SUCCESS;
