@@ -12,7 +12,8 @@
 
 /*
  * express = mul ("+" mul | "-" mul)*
- * mul = primary ("*" primary | "/" primary)*
+ * mul = primary ("*" unary | "/" unary)*
+ * unary = ("+" | "-")? primary
  * primary = num | "(" express ")"
  */
 
@@ -50,13 +51,24 @@ Node* mul(char* user_input, Token** token) {
 
     for (;;) {
         if (consume_op(token, '*')) {
-            node = create_node(ND_MUL, node, primary(user_input, token));
+            node = create_node(ND_MUL, node, unary(user_input, token));
         } else if (consume_op(token, '/')) {
-            node = create_node(ND_DIV, node, primary(user_input, token));
+            node = create_node(ND_DIV, node, unary(user_input, token));
         } else {
             return node;
         }
     }
+}
+
+Node* unary(char* user_input, Token** token) {
+    if (consume_op(token, '+')) {
+        return primary(user_input, token);
+    }
+    /* return a node that has 0-primary() */
+    if (consume_op(token, '-')) {
+        return create_node(ND_SUB, create_node_num(0), primary(user_input, token));
+    }
+    return primary(user_input, token);
 }
 
 Node* primary(char* user_input, Token** token) {

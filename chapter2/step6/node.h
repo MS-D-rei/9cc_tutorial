@@ -27,6 +27,8 @@ Node* express(char* user_input, Token** token);
 
 Node* mul(char* user_input, Token** token);
 
+Node* unary(char* user_input, Token** token);
+
 Node* primary(char* user_input, Token** token);
 
 void generate_asm_code(Node* node);
