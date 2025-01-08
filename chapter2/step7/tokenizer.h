@@ -13,17 +13,20 @@ struct Token {
     Token* next;
     int val;
     char* str;
+    int len;
 };
 
-bool consume_op(Token** token, char op);
+bool consume_op(Token** token, char* op);
 
-void expect_op(char* user_input, Token** token, char op);
+void expect_op(char* user_input, Token** token, char* op);
 
 int expect_number(char* user_input, Token** token);
 
 bool at_eof(Token* token);
 
-Token* create_token(TokenKind kind, Token* current, char* str);
+Token* create_token(TokenKind kind, Token* current, char* str, int len);
+
+bool multiletter_op(char* op, char* p);
 
 Token* tokenize(char* user_input);
 
