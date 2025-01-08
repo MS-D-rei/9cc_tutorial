@@ -127,7 +127,7 @@ Node* unary(char* user_input, Token** token) {
 /* primary = num | "(" express ")" */
 Node* primary(char* user_input, Token** token) {
     if (consume_op(token, "(")) {
-        Node* node = add(user_input, token);
+        Node* node = express(user_input, token);
         expect_op(user_input, token, ")");
         return node;
     }
