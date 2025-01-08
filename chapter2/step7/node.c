@@ -10,9 +10,23 @@
 
 /* Algorithm for converting Tokens to abstract syntax tree. */
 
+/* Precedence low to high
+ *
+ * 1. ==, !=
+ * 2. <, <=, >, >=
+ * 3. +, -
+ * 4. *, /
+ * 5. +num, -num
+ * 6. ()
+ *
+ */
+
 /*
- * express = mul ("+" mul | "-" mul)*
- * mul = primary ("*" unary | "/" unary)*
+ * express = equality
+ * equality = relational ("==" relational | "!=" relational)*
+ * relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+ * add = mul ("+" mul | "-" mul)*
+ * mul = unary ("*" unary | "/" unary)*
  * unary = ("+" | "-")? primary
  * primary = num | "(" express ")"
  */
@@ -32,13 +46,50 @@ Node* create_node_num(int val) {
     return new_node;
 }
 
-Node* express(char* user_input, Token** token) {
+Node* express(char* user_input, Token** token) { return equality(user_input, token); }
+
+/* equality = relational ("==" relational | "!=" relational)* */
+Node* equality(char* user_input, Token** token) {
+    Node* node = relational(user_input, token);
+
+    for (;;) {
+        if (consume_op(token, "==")) {
+            node = create_node(ND_EQ, node, relational(user_input, token));
+        } else if (consume_op(token, "!=")) {
+            node = create_node(ND_NEQ, node, relational(user_input, token));
+        } else {
+            return node;
+        }
+    }
+}
+
+/* relational = add ("<" add | "<=" add | ">" add | ">=" add)* */
+Node* relational(char* user_input, Token** token) {
+    Node* node = add(user_input, token);
+
+    for (;;) {
+        if (consume_op(token, "<")) {
+            node = create_node(ND_LT, node, add(user_input, token));
+        } else if (consume_op(token, "<=")) {
+            node = create_node(ND_LTE, node, add(user_input, token));
+        } else if (consume_op(token, ">")) {
+            node = create_node(ND_LT, add(user_input, token), node);
+        } else if (consume_op(token, ">=")) {
+            node = create_node(ND_LTE, add(user_input, token), node);
+        } else {
+            return node;
+        }
+    }
+}
+
+/* add = mul ("+" mul | "-" mul)* */
+Node* add(char* user_input, Token** token) {
     Node* node = mul(user_input, token);
 
     for (;;) {
-        if (consume_op(token, '+')) {
+        if (consume_op(token, "+")) {
             node = create_node(ND_ADD, node, mul(user_input, token));
-        } else if (consume_op(token, '-')) {
+        } else if (consume_op(token, "-")) {
             node = create_node(ND_SUB, node, mul(user_input, token));
         } else {
             return node;
@@ -46,13 +97,14 @@ Node* express(char* user_input, Token** token) {
     }
 }
 
+/* mul = unary ("*" unary | "/" unary)* */
 Node* mul(char* user_input, Token** token) {
-    Node* node = primary(user_input, token);
+    Node* node = unary(user_input, token);
 
     for (;;) {
-        if (consume_op(token, '*')) {
+        if (consume_op(token, "*")) {
             node = create_node(ND_MUL, node, unary(user_input, token));
-        } else if (consume_op(token, '/')) {
+        } else if (consume_op(token, "/")) {
             node = create_node(ND_DIV, node, unary(user_input, token));
         } else {
             return node;
@@ -60,21 +112,23 @@ Node* mul(char* user_input, Token** token) {
     }
 }
 
+/* unary = ("+" | "-")? primary */
 Node* unary(char* user_input, Token** token) {
-    if (consume_op(token, '+')) {
+    if (consume_op(token, "+")) {
         return primary(user_input, token);
     }
     /* return a node that has 0-primary() */
-    if (consume_op(token, '-')) {
+    if (consume_op(token, "-")) {
         return create_node(ND_SUB, create_node_num(0), primary(user_input, token));
     }
     return primary(user_input, token);
 }
 
+/* primary = num | "(" express ")" */
 Node* primary(char* user_input, Token** token) {
-    if (consume_op(token, '(')) {
-        Node* node = express(user_input, token);
-        expect_op(user_input, token, ')');
+    if (consume_op(token, "(")) {
+        Node* node = add(user_input, token);
+        expect_op(user_input, token, ")");
         return node;
     }
 
@@ -142,6 +196,26 @@ void generate_asm_code(Node* node) {
          */
         /* `idiv` does EDX:EAX / 32bit divisor = EAX(Quotient) and EDX(Remainder) */
         printf("  idiv rdi\n");
+        break;
+    case ND_EQ:
+        printf("  cmp rax, rdi\n");
+        printf("  sete al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_NEQ:
+        printf("  cmp rax, rdi\n");
+        printf("  setne al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LT:
+        printf("  cmp rax, rdi\n");
+        printf("  setl al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LTE:
+        printf("  cmp rax, rdi\n");
+        printf("  setle al\n");
+        printf("  movzb rax, al\n");
         break;
     }
 

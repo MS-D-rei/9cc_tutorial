@@ -8,6 +8,10 @@ typedef enum {
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_EQ,  // `==`
+    ND_NEQ, // `!=`
+    ND_LT,  // `<`
+    ND_LTE, // `<=`
     ND_NUM,
 } NodeKind;
 
@@ -24,6 +28,12 @@ Node* create_node(NodeKind kind, Node* lhs, Node* rhs);
 Node* create_node_num(int val);
 
 Node* express(char* user_input, Token** token);
+
+Node* equality(char* user_input, Token** token);
+
+Node* relational(char* user_input, Token** token);
+
+Node* add(char* user_input, Token** token);
 
 Node* mul(char* user_input, Token** token);
 
