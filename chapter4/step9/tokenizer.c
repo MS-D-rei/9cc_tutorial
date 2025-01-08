@@ -75,6 +75,11 @@ Token* tokenize(char* user_input) {
             p++;
             continue;
         }
+        if ('a' <= *p && *p <= 'z') {
+            current = create_token(TK_IDENT, current, p, 1);
+            p++;
+            continue;
+        }
         if (isdigit(*p)) {
             current = create_token(TK_NUM, current, p, 1);
             current->val = strtol(p, &p, 10);
