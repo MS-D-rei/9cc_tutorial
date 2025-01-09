@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error_at.h"
+#include "error.h"
 #include "tokenizer.h"
 
 /* token->kind == TK_RESERVED && token->str[0] == op */

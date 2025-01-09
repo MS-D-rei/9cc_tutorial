@@ -1,22 +1,14 @@
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "error.h"
 #include "node.h"
 #include "tokenizer.h"
 
 char* user_input;
 
 Token* token;
-
-void error(char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    exit(1);
-}
 
 int main(int argc, char** argv) {
     if (argc != 2) {
