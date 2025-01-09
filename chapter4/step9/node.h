@@ -12,6 +12,8 @@ typedef enum {
     ND_NEQ, // `!=`
     ND_LT,  // `<`
     ND_LTE, // `<=`
+    ND_ASSIGN,
+    ND_LVAR, // local variable
     ND_NUM,
 } NodeKind;
 
@@ -20,14 +22,21 @@ struct Node {
     NodeKind kind;
     Node* lhs;
     Node* rhs;
-    int val; // Only used when NodeKind is ND_NUM.
+    int val;    // Only used when NodeKind is ND_NUM.
+    int offset; // only used when NodeKind is ND_LVAR.
 };
 
 Node* create_node(NodeKind kind, Node* lhs, Node* rhs);
 
 Node* create_node_num(int val);
 
+void program(char* user_input, Token** token, Node* code[]);
+
+Node* statement(char* user_input, Token** token);
+
 Node* express(char* user_input, Token** token);
+
+Node* assign(char* user_input, Token** token);
 
 Node* equality(char* user_input, Token** token);
 

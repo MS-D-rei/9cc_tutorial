@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "error.h"
 #include "node.h"
 #include "tokenizer.h"
 
@@ -22,13 +23,16 @@
  */
 
 /*
- * express = equality
+ * program = statement*
+ * statement = express ";"
+ * express = assign
+ * assign = equality ("=" assign)?
  * equality = relational ("==" relational | "!=" relational)*
  * relational = add ("<" add | "<=" add | ">" add | ">=" add)*
  * add = mul ("+" mul | "-" mul)*
  * mul = unary ("*" unary | "/" unary)*
  * unary = ("+" | "-")? primary
- * primary = num | "(" express ")"
+ * primary = num | ident | "(" express ")"
  */
 
 Node* create_node(NodeKind kind, Node* lhs, Node* rhs) {
@@ -46,7 +50,43 @@ Node* create_node_num(int val) {
     return new_node;
 }
 
-Node* express(char* user_input, Token** token) { return equality(user_input, token); }
+Node* create_node_ident(Token** token) {
+    Node* new_node = calloc(1, sizeof(Node));
+    new_node->kind = ND_LVAR;
+    new_node->offset = ((*token)->str[0] - 'a' + 1) * 8;
+    return new_node;
+}
+
+/* program = statement* */
+void program(char* user_input, Token** token, Node* code[]) {
+    int i = 0;
+    while (!at_eof(*token)) {
+        code[i] = statement(user_input, token);
+        i++;
+    }
+    code[i] = NULL;
+}
+
+/* statement = express ";" */
+Node* statement(char* user_input, Token** token) {
+    Node* node = express(user_input, token);
+    expect_op(user_input, token, ";");
+    return node;
+}
+
+/* express = assign */
+Node* express(char* user_input, Token** token) { return assign(user_input, token); }
+
+/* assign = equality ("=" assign)? */
+Node* assign(char* user_input, Token** token) {
+    Node* node = equality(user_input, token);
+
+    if (consume_op(token, "=")) {
+        node = create_node(ND_ASSIGN, node, assign(user_input, token));
+    }
+
+    return node;
+}
 
 /* equality = relational ("==" relational | "!=" relational)* */
 Node* equality(char* user_input, Token** token) {
@@ -124,15 +164,29 @@ Node* unary(char* user_input, Token** token) {
     return primary(user_input, token);
 }
 
-/* primary = num | "(" express ")" */
+/* primary = num | ident | "(" express ")" */
 Node* primary(char* user_input, Token** token) {
     if (consume_op(token, "(")) {
         Node* node = express(user_input, token);
         expect_op(user_input, token, ")");
         return node;
     }
+    if ('a' <= (*token)->str[0] && (*token)->str[0] <= 'z') {
+        return create_node_ident(token);
+    }
 
     return create_node_num(expect_number(user_input, token));
+}
+
+void generate_lvalue(Node* node) {
+    if (node->kind != ND_LVAR) {
+        error("left value is not variable.");
+    }
+
+    /* Push variable located at [Base pointer + offset]. */
+    printf("  mov rax, rbp\n");
+    printf("  sub rax, %d\n", node->offset);
+    printf("  push rax\n");
 }
 
 /*
@@ -165,12 +219,35 @@ Node* primary(char* user_input, Token** token) {
  * lhs rhs
  */
 void generate_asm_code(Node* node) {
-    if (node->kind == ND_NUM) {
+    switch (node->kind) {
+    case ND_NUM:
         printf("  push %d\n", node->val);
+        return;
+    case ND_LVAR:
+        /* Generate_lvalue pushes variable. */
+        generate_lvalue(node);
+
+        /* Takes the variable to rax. */
+        printf("  pop rax\n");
+        /* Copies the addresss value of rax to rax. */
+        printf("  mov rax, [rax]\n");
+        printf("  push rax\n");
+        return;
+    case ND_ASSIGN:
+        generate_lvalue(node->lhs);
+        generate_asm_code(node->rhs);
+
+        /* Takes value of generate_asm_code. */
+        printf("  pop rdi\n");
+        /* Takes address value of generate_lvalue. */
+        printf("  pop rax\n");
+        /* Copies the value of generate_asm_code to generate_lvalue. */
+        printf("  mov [rax], rdi\n");
+        printf("  push rdi\n");
         return;
     }
 
-    /* calculate `lhs` and `rhs`, then push each value to stack. */
+    /* Calculate `lhs` and `rhs`, then push each value to stack. */
     generate_asm_code(node->lhs);
     generate_asm_code(node->rhs);
 

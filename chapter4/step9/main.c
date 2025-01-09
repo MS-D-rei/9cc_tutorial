@@ -19,28 +19,29 @@ int main(int argc, char** argv) {
     /* Create token linked list. */
     token = tokenize(user_input);
     /* Create nodes of a abstract syntax tree. */
-    Node* node = express(user_input, &token);
+    Node* code[100];
+    program(user_input, &token, code);
 
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    // printf("  mov rax, %d\n", expect_number(user_input, &token));
-    //
-    // while (!at_eof(token)) {
-    //     if (consume_op(&token, '+')) {
-    //         printf("  add rax, %d\n", expect_number(user_input, &token));
-    //         continue;
-    //     }
-    //     if (consume_op(&token, '-')) {
-    //         printf("  sub rax, %d\n", expect_number(user_input, &token));
-    //         continue;
-    //     }
-    // }
+    /* Prologue. */
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, 208\n");
 
-    generate_asm_code(node);
+    /* Generate code from code[0]. */
+    for (int i = 0; code[i]; i++) {
+        generate_asm_code(code[i]);
 
-    printf("  pop rax\n");
+        /* Always ends with `push rax`, so apply `pop` not to overflow stack. */
+        printf("  pop rax\n");
+    }
+
+    /* Epilogue. */
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
     printf("  ret\n");
 
     return EXIT_SUCCESS;
