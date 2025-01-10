@@ -23,6 +23,8 @@ void expect_op(char* user_input, Token** token, char* op);
 
 int expect_number(char* user_input, Token** token);
 
+void expect_lvar(char* user_input, Token** token);
+
 bool at_eof(Token* token);
 
 Token* create_token(TokenKind kind, Token* current, char* str, int len);

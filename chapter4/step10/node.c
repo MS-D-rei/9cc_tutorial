@@ -172,6 +172,7 @@ Node* primary(char* user_input, Token** token) {
         return node;
     }
     if ('a' <= (*token)->str[0] && (*token)->str[0] <= 'z') {
+        expect_lvar(user_input, token);
         return create_node_ident(token);
     }
 

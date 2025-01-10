@@ -37,6 +37,14 @@ int expect_number(char* user_input, Token** token) {
     return val;
 }
 
+/* Ensure the current token is lvalue, and move to the next token. */
+void expect_lvar(char* user_input, Token** token) {
+    if ((*token)->kind != TK_IDENT) {
+        error_at(user_input, (*token)->str, "expected lvalue");
+    }
+    *token = (*token)->next;
+}
+
 bool at_eof(Token* token) { return token->kind == TK_EOF; }
 
 /* Create new token and add it to the `current` token next then returns the new token. */
@@ -70,7 +78,7 @@ Token* tokenize(char* user_input) {
             p += 2;
             continue;
         }
-        if (strchr("+-*/()<>", *p)) {
+        if (strchr("+-*/()<>;=", *p)) {
             current = create_token(TK_RESERVED, current, p, 1);
             p++;
             continue;
