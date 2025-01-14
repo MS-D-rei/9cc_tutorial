@@ -44,4 +44,8 @@ assert "(1+1)*2 >= 4;" 1
 # 1 char local variable
 assert "a=2; b=4; a+b;" 6
 
+# multi-letter local variable.
+assert "abc=10; edf=5; abc+edf;" 15
+assert "abc=10; edf=5; (abc+5)*edf;" 75
+
 echo "Test end"
