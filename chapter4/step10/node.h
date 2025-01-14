@@ -17,18 +17,34 @@ typedef enum {
     ND_NUM,
 } NodeKind;
 
+typedef struct LVar LVar;
+struct LVar {
+    LVar* next;
+    char* name;
+    int len;
+    int offset;
+};
+
 typedef struct Node Node;
 struct Node {
     NodeKind kind;
     Node* lhs;
     Node* rhs;
     int val;    // Only used when NodeKind is ND_NUM.
-    int offset; // only used when NodeKind is ND_LVAR.
+    LVar* lvar; // only used when NodeKind is ND_LVAR.
 };
 
 Node* create_node(NodeKind kind, Node* lhs, Node* rhs);
 
 Node* create_node_num(int val);
+
+Node* create_node_lvar();
+
+Token* create_merged_token_ident(Token** token);
+
+int count_token_letter(Token* token);
+
+char* create_lvar_name(Token* token, int letter_count);
 
 void program(char* user_input, Token** token, Node* code[]);
 
@@ -50,6 +66,8 @@ Node* unary(char* user_input, Token** token);
 
 Node* primary(char* user_input, Token** token);
 
-void generate_asm_code(Node* node);
+LVar* find_lvar(Token* token, LVar* locals);
+
+void assign_lvar_offsets(LVar* locals);
 
 #endif // !NODE_H

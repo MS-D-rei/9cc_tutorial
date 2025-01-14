@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "error.h"
 #include "node.h"
 #include "tokenizer.h"
 
@@ -35,6 +35,8 @@
  * primary = num | ident | "(" express ")"
  */
 
+LVar* locals = NULL;
+
 Node* create_node(NodeKind kind, Node* lhs, Node* rhs) {
     Node* new_node = calloc(1, sizeof(Node));
     new_node->kind = kind;
@@ -50,11 +52,45 @@ Node* create_node_num(int val) {
     return new_node;
 }
 
-Node* create_node_ident(Token** token) {
+Node* create_node_lvar() {
     Node* new_node = calloc(1, sizeof(Node));
     new_node->kind = ND_LVAR;
-    new_node->offset = ((*token)->str[0] - 'a' + 1) * 8;
     return new_node;
+}
+
+/* Merges consecutive ident tokens into one token. */
+Token* create_merged_token_ident(Token** token) {
+    Token* new_token = calloc(1, sizeof(Token));
+    new_token->kind = TK_IDENT;
+
+    Token* current = *token;
+    /* Moves token to then token after merged one. */
+    while (current->kind == TK_IDENT) {
+        current = current->next;
+    }
+    (*token) = current;
+
+    return new_token;
+}
+
+int count_token_letter(Token* token) {
+    int count = 0;
+    while (token->kind == TK_IDENT) {
+        count++;
+        token = token->next;
+    }
+
+    return count;
+}
+
+char* create_lvar_name(Token* token, int letter_count) {
+    char* str = calloc(letter_count + 1, sizeof(char));
+    for (int i = 0; i < letter_count; i++) {
+        str[i] = token->str[i];
+    }
+    str[letter_count] = '\0';
+
+    return str;
 }
 
 /* program = statement* */
@@ -65,6 +101,8 @@ void program(char* user_input, Token** token, Node* code[]) {
         i++;
     }
     code[i] = NULL;
+    /* After creating all nodes, assign all lvar offsets. */
+    assign_lvar_offsets(locals);
 }
 
 /* statement = express ";" */
@@ -172,131 +210,50 @@ Node* primary(char* user_input, Token** token) {
         return node;
     }
     if ('a' <= (*token)->str[0] && (*token)->str[0] <= 'z') {
-        Node* node = create_node_ident(token);
-        expect_lvar(user_input, token);
+        /* Create new token to merge TK_IDENT tokens. */
+        /* And move token list to the token after the merged token. */
+        int letter_count = count_token_letter(*token);
+        char* str = create_lvar_name(*token, letter_count);
+        Token* merged_token = create_merged_token_ident(token);
+        merged_token->str = str;
+        merged_token->len = strlen(str);
+        Node* node = create_node_lvar();
+
+        LVar* lvar = find_lvar(merged_token, locals);
+
+        if (lvar) {
+            node->lvar = lvar;
+        } else {
+            /* Create new lvar and link to locals. */
+            LVar* lvar = calloc(1, sizeof(LVar));
+            lvar->name = merged_token->str;
+            lvar->len = merged_token->len;
+            lvar->next = locals;
+            locals = lvar;
+            /* Link the node with the lvar. */
+            node->lvar = lvar;
+        }
+
         return node;
     }
 
     return create_node_num(expect_number(user_input, token));
 }
 
-void generate_lvalue(Node* node) {
-    if (node->kind != ND_LVAR) {
-        error("left value is not variable.");
+LVar* find_lvar(Token* token, LVar* locals) {
+    for (LVar* var = locals; var; var = var->next) {
+        /* Length and name are the same */
+        if (var->len == token->len && !memcmp(token->str, var->name, var->len)) {
+            return var;
+        }
     }
-
-    /* Push variable located at [Base pointer + offset]. */
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->offset);
-    printf("  push rax\n");
+    return NULL;
 }
 
-/*
- * ex. calculation for `2*3+4*5`
- *
- * calculate `2 * 3` and push to stack.
- * push 2
- * push 3
- * pop rdi
- * pop rax
- * mul rax, rdi
- * push rax
- * calculate `4 * 5` and push to stack.
- * push 4
- * push 5
- * pop rdi
- * pop rax
- * mul rax, rdi
- * push rax
- * Finally, add 2 intermediate results and push to stack.
- * pop rdi
- * pop rax
- * add rax, rdi
- * push rax
- *
- */
-/*
- *    A
- *   / \
- * lhs rhs
- */
-void generate_asm_code(Node* node) {
-    switch (node->kind) {
-    case ND_NUM:
-        printf("  push %d\n", node->val);
-        return;
-    case ND_LVAR:
-        /* Generate_lvalue pushes variable. */
-        generate_lvalue(node);
-
-        /* Takes the variable to rax. */
-        printf("  pop rax\n");
-        /* Copies the addresss value of rax to rax. */
-        printf("  mov rax, [rax]\n");
-        printf("  push rax\n");
-        return;
-    case ND_ASSIGN:
-        generate_lvalue(node->lhs);
-        generate_asm_code(node->rhs);
-
-        /* Takes value of generate_asm_code. */
-        printf("  pop rdi\n");
-        /* Takes address value of generate_lvalue. */
-        printf("  pop rax\n");
-        /* Copies the value of generate_asm_code to generate_lvalue. */
-        printf("  mov [rax], rdi\n");
-        printf("  push rdi\n");
-        return;
+void assign_lvar_offsets(LVar* locals) {
+    int offset = 0;
+    for (LVar* var = locals; var; var = var->next) {
+        offset += 8;
+        var->offset = offset;
     }
-
-    /* Calculate `lhs` and `rhs`, then push each value to stack. */
-    generate_asm_code(node->lhs);
-    generate_asm_code(node->rhs);
-
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
-
-    switch (node->kind) {
-    case ND_ADD:
-        printf("  add rax, rdi\n");
-        break;
-    case ND_SUB:
-        printf("  sub rax, rdi\n");
-        break;
-    case ND_MUL:
-        printf("  imul rax, rdi\n");
-        break;
-    case ND_DIV:
-        /* https://www.felixcloutier.com/x86/cwd:cdq:cqo */
-        /* `CQO` instruction (available in 64-bit mode only) copies the sign (bit63)
-         * of the value in the RAX register into every bit position in the RDX register.  */
-        printf("  cqo\n");
-        /* https://www.tutorialspoint.com/assembly_programming/assembly_arithmetic_instructions.htm
-         */
-        /* `idiv` does EDX:EAX / 32bit divisor = EAX(Quotient) and EDX(Remainder) */
-        printf("  idiv rdi\n");
-        break;
-    case ND_EQ:
-        printf("  cmp rax, rdi\n");
-        printf("  sete al\n");
-        printf("  movzb rax, al\n");
-        break;
-    case ND_NEQ:
-        printf("  cmp rax, rdi\n");
-        printf("  setne al\n");
-        printf("  movzb rax, al\n");
-        break;
-    case ND_LT:
-        printf("  cmp rax, rdi\n");
-        printf("  setl al\n");
-        printf("  movzb rax, al\n");
-        break;
-    case ND_LTE:
-        printf("  cmp rax, rdi\n");
-        printf("  setle al\n");
-        printf("  movzb rax, al\n");
-        break;
-    }
-
-    printf("  push rax\n");
 }
