@@ -71,6 +71,14 @@ void generate_asm_code(Node* node) {
         printf("  mov [rax], rdi\n");
         printf("  push rdi\n");
         return;
+    case ND_RETURN:
+        generate_asm_code(node->lhs);
+
+        printf("  pop rax\n");
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+        printf("  ret\n");
+        return;
     default:
         break;
     }
