@@ -48,4 +48,8 @@ assert "a=2; b=4; a+b;" 6
 assert "abc=10; edf=5; abc+edf;" 15
 assert "abc=10; edf=5; (abc+5)*edf;" 75
 
+# `return` statement.
+assert "return 5;" 5
+assert "abc=10; abc=abc+5; return abc; " 15
+
 echo "Test end"
