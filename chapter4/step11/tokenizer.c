@@ -60,6 +60,10 @@ Token* create_token(TokenKind kind, Token* current, char* str, int len) {
 /* Return true if input `p` starts with multiletter operation `op` */
 bool multiletter_op(char* op, char* p) { return memcmp(op, p, strlen(op)) == 0; }
 
+bool is_alphabet_or_number(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || (c == '_');
+}
+
 /* Tokenize `user_input` and returns token linked list. */
 Token* tokenize(char* user_input) {
     char* p = user_input;
@@ -70,6 +74,11 @@ Token* tokenize(char* user_input) {
     while (*p) {
         if (isspace(*p)) {
             p++;
+            continue;
+        }
+        if (strncmp(p, "return", 6) == 0 && !is_alphabet_or_number(p[6])) {
+            current = create_token(TK_RETURN, current, p, 6);
+            p += 6;
             continue;
         }
         if (multiletter_op("==", p) || multiletter_op("!=", p) || multiletter_op("<=", p) ||
