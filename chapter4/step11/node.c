@@ -24,7 +24,7 @@
 
 /*
  * program = statement*
- * statement = express ";"
+ * statement = express ";" | "return" express ";"
  * express = assign
  * assign = equality ("=" assign)?
  * equality = relational ("==" relational | "!=" relational)*
@@ -105,9 +105,18 @@ void program(char* user_input, Token** token, Node* code[]) {
     assign_lvar_offsets(locals);
 }
 
-/* statement = express ";" */
+/* statement = express ";" | "return" express ";" */
 Node* statement(char* user_input, Token** token) {
-    Node* node = express(user_input, token);
+    Node* node;
+    if ((*token)->kind == TK_RETURN) {
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_RETURN;
+        (*token) = (*token)->next;
+        node->lhs = express(user_input, token);
+
+    } else {
+        node = express(user_input, token);
+    }
     expect_op(user_input, token, ";");
     return node;
 }

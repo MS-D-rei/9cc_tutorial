@@ -13,7 +13,8 @@ typedef enum {
     ND_LT,  // `<`
     ND_LTE, // `<=`
     ND_ASSIGN,
-    ND_LVAR, // local variable
+    ND_LVAR,   // Local variable.
+    ND_RETURN, // `return`.
     ND_NUM,
 } NodeKind;
 
@@ -21,8 +22,8 @@ typedef struct LVar LVar;
 struct LVar {
     LVar* next;
     char* name;
-    int len;
-    int offset;
+    int len;    // Name length.
+    int offset; // Stack location.
 };
 
 typedef struct Node Node;
@@ -31,7 +32,7 @@ struct Node {
     Node* lhs;
     Node* rhs;
     int val;    // Only used when NodeKind is ND_NUM.
-    LVar* lvar; // only used when NodeKind is ND_LVAR.
+    LVar* lvar; // Only used when NodeKind is ND_LVAR.
 };
 
 Node* create_node(NodeKind kind, Node* lhs, Node* rhs);
